@@ -33,14 +33,17 @@ ranging_cmd = TwistStamped()
 bearing_cmd = TwistStamped()
 theta_fov_fix = 30*pi/180
 theta_occ = 15*pi/180
-d_safe_car = 3
+d_safe_car = 6
 d_measuring = 15
-d_safe_uav = 1
+d_safe_uav = 2
+height_safe = 1
 gamma_safe_car = 1
 gamma_measuring = 1
 gamma_safe_uav = 1
 gamma_fov = 1
+gamma_height = 1
 gamma_occ = 1
+
 
 def object_fun(x):
         return np.linalg.norm(np.array(x[0:12])-u_desired)**2
@@ -67,8 +70,8 @@ def uavs_pose_cb(msg):
 
 def ukf_cb(msg):
 	global Pq,Vq,optimal_sensing_mode,ukf_flag
-	Pq = np.array([msg.target_pose.x, msg.target_pose.y, target_height/2])
-	Vq = np.array([msg.target_vel.x, msg.target_vel.y, 0])
+	Pq = np.array([0, 0, target_height])
+	Vq = np.array([0, 0, 0])
 	optimal_sensing_mode = msg.cmode.data
 	if msg != None:
 		ukf_flag = True
@@ -151,39 +154,45 @@ def CBF():
 				  [0]*6+[-2*r_bc[0], -2*r_bc[1], -2*r_bc[2]]+[0]*3, \
 				  [0]*6+[-2*r_br[0], -2*r_br[1], -2*r_br[2]]+[0]*3, \
 				  np.append(np.append(-(np.dot(nc,r_qc)*r_qc/r_qc_norm**3-nc/r_qc_norm)/sqrt(1 - np.dot(nc,r_qc)**2/r_qc_norm**2),[0]*6),np.append(-np.dot(nc_dot,r_qc)/r_qc_norm/sqrt(1 - np.dot(nc,r_qc)**2/r_qc_norm**2),[0]*2)), \
-				  np.append(np.append(-((r_qc-r_rc)/r_rc_norm/r_qc_norm+(np.dot(r_rc,r_qc)*r_rc)/r_rc_norm**3/r_qc_norm+(np.dot(r_rc,r_qc)*r_qc)/r_rc_norm/r_qc_norm**3)/sqrt(1 - np.dot(r_rc,r_qc)**2/r_rc_norm**2/r_qc_norm**2), \
-				  -(r_qc/r_rc_norm/r_qc_norm-(np.dot(r_rc,r_qc)*r_rc)/r_rc_norm**3/r_qc_norm)/sqrt(1 - np.dot(r_rc,r_qc)**2/r_rc_norm**2/r_qc_norm**2)),[0]*6), \
-				  np.append(np.append(-((r_qc-r_bc)/r_bc_norm/r_qc_norm+(np.dot(r_bc,r_qc)*r_bc)/r_bc_norm**3/r_qc_norm+(np.dot(r_bc,r_qc)*r_qc)/r_bc_norm/r_qc_norm**3)/sqrt(1 - np.dot(r_bc,r_qc)**2/r_bc_norm**2/r_qc_norm**2),[0]*3),\
-				  np.append(-(r_qc/r_bc_norm/r_qc_norm-(np.dot(r_bc,r_qc)*r_bc)/r_bc_norm**3/r_qc_norm)/sqrt(1 - np.dot(r_bc,r_qc)**2/r_bc_norm**2/r_qc_norm**2),[0]*3)), \
-				  np.append(np.append(-((r_qr-r_cr)/r_cr_norm/r_qr_norm+(np.dot(r_cr,r_qr)*r_cr)/r_cr_norm**3/r_qr_norm+(np.dot(r_cr,r_qr)*r_qr)/r_cr_norm/r_qr_norm**3)/sqrt(1 - np.dot(r_cr,r_qr)**2/r_cr_norm**2/r_qr_norm**2), \
-				  -(r_qr/r_cr_norm/r_qr_norm-(np.dot(r_cr,r_qr)*r_cr)/r_cr_norm**3/r_qr_norm)/sqrt(1 - np.dot(r_cr,r_qr)**2/r_cr_norm**2/r_qr_norm**2)),[0]*6), \
-				  np.append(np.append([0]*3,-((r_qr-r_br)/r_br_norm/r_qr_norm+(np.dot(r_br,r_qr)*r_br)/r_br_norm**3/r_qr_norm+(np.dot(r_br,r_qr)*r_qr)/r_br_norm/r_qr_norm**3)/sqrt(1 - np.dot(r_br,r_qr)**2/r_br_norm**2/r_qr_norm**2)), \
-				  np.append(-(r_qr/r_br_norm/r_qr_norm-(np.dot(r_br,r_qr)*r_br)/r_br_norm**3/r_qr_norm)/sqrt(1 - np.dot(r_br,r_qr)**2/r_br_norm**2/r_qr_norm**2),[0]*3)), \
-				  np.append(np.append(-((r_qb-r_cb)/r_cb_norm/r_qb_norm+(np.dot(r_cb,r_qb)*r_cb)/r_cb_norm**3/r_qb_norm+(np.dot(r_cb,r_qb)*r_qb)/r_cb_norm/r_qb_norm**3)/sqrt(1 - np.dot(r_cb,r_qb)**2/r_cb_norm**2/r_qb_norm**2),[0]*3), \
-				  np.append(-(r_qb/r_cb_norm/r_qb_norm-(np.dot(r_cb,r_qb)*r_cb)/r_cb_norm**3/r_qb_norm)/sqrt(1 - np.dot(r_cb,r_qb)**2/r_cb_norm**2/r_qb_norm**2),[0]*3)), \
-				  np.append(np.append([0]*3,-((r_qb-r_rb)/r_rb_norm/r_qb_norm+(np.dot(r_rb,r_qb)*r_rb)/r_rb_norm**3/r_qb_norm+(np.dot(r_rb,r_qb)*r_qb)/r_rb_norm/r_qb_norm**3)/sqrt(1 - np.dot(r_rb,r_qb)**2/r_rb_norm**2/r_qb_norm**2)), \
-				  np.append(-(r_qb/r_rb_norm/r_qb_norm-(np.dot(r_rb,r_qb)*r_rb)/r_rb_norm**3/r_qb_norm)/sqrt(1 - np.dot(r_rb,r_qb)**2/r_rb_norm**2/r_qb_norm**2),[0]*3)) \
+				  [0]*2+[-1]+[0]*9, \
+				  [0]*5+[-1]+[0]*6, \
+				  [0]*8+[-1]+[0]*3 \
+				  #np.append(np.append(-((r_qc-r_rc)/r_rc_norm/r_qc_norm+(np.dot(r_rc,r_qc)*r_rc)/r_rc_norm**3/r_qc_norm+(np.dot(r_rc,r_qc)*r_qc)/r_rc_norm/r_qc_norm**3)/sqrt(1 - np.dot(r_rc,r_qc)**2/r_rc_norm**2/r_qc_norm**2), \
+				  #-(r_qc/r_rc_norm/r_qc_norm-(np.dot(r_rc,r_qc)*r_rc)/r_rc_norm**3/r_qc_norm)/sqrt(1 - np.dot(r_rc,r_qc)**2/r_rc_norm**2/r_qc_norm**2)),[0]*6), \
+				  #np.append(np.append(-((r_qc-r_bc)/r_bc_norm/r_qc_norm+(np.dot(r_bc,r_qc)*r_bc)/r_bc_norm**3/r_qc_norm+(np.dot(r_bc,r_qc)*r_qc)/r_bc_norm/r_qc_norm**3)/sqrt(1 - np.dot(r_bc,r_qc)**2/r_bc_norm**2/r_qc_norm**2),[0]*3),\
+				  #np.append(-(r_qc/r_bc_norm/r_qc_norm-(np.dot(r_bc,r_qc)*r_bc)/r_bc_norm**3/r_qc_norm)/sqrt(1 - np.dot(r_bc,r_qc)**2/r_bc_norm**2/r_qc_norm**2),[0]*3)), \
+				  #np.append(np.append(-((r_qr-r_cr)/r_cr_norm/r_qr_norm+(np.dot(r_cr,r_qr)*r_cr)/r_cr_norm**3/r_qr_norm+(np.dot(r_cr,r_qr)*r_qr)/r_cr_norm/r_qr_norm**3)/sqrt(1 - np.dot(r_cr,r_qr)**2/r_cr_norm**2/r_qr_norm**2), \
+				  #-(r_qr/r_cr_norm/r_qr_norm-(np.dot(r_cr,r_qr)*r_cr)/r_cr_norm**3/r_qr_norm)/sqrt(1 - np.dot(r_cr,r_qr)**2/r_cr_norm**2/r_qr_norm**2)),[0]*6), \
+				  #np.append(np.append([0]*3,-((r_qr-r_br)/r_br_norm/r_qr_norm+(np.dot(r_br,r_qr)*r_br)/r_br_norm**3/r_qr_norm+(np.dot(r_br,r_qr)*r_qr)/r_br_norm/r_qr_norm**3)/sqrt(1 - np.dot(r_br,r_qr)**2/r_br_norm**2/r_qr_norm**2)), \
+				  #np.append(-(r_qr/r_br_norm/r_qr_norm-(np.dot(r_br,r_qr)*r_br)/r_br_norm**3/r_qr_norm)/sqrt(1 - np.dot(r_br,r_qr)**2/r_br_norm**2/r_qr_norm**2),[0]*3)), \
+				  #np.append(np.append(-((r_qb-r_cb)/r_cb_norm/r_qb_norm+(np.dot(r_cb,r_qb)*r_cb)/r_cb_norm**3/r_qb_norm+(np.dot(r_cb,r_qb)*r_qb)/r_cb_norm/r_qb_norm**3)/sqrt(1 - np.dot(r_cb,r_qb)**2/r_cb_norm**2/r_qb_norm**2),[0]*3), \
+				  #np.append(-(r_qb/r_cb_norm/r_qb_norm-(np.dot(r_cb,r_qb)*r_cb)/r_cb_norm**3/r_qb_norm)/sqrt(1 - np.dot(r_cb,r_qb)**2/r_cb_norm**2/r_qb_norm**2),[0]*3)), \
+				  #np.append(np.append([0]*3,-((r_qb-r_rb)/r_rb_norm/r_qb_norm+(np.dot(r_rb,r_qb)*r_rb)/r_rb_norm**3/r_qb_norm+(np.dot(r_rb,r_qb)*r_qb)/r_rb_norm/r_qb_norm**3)/sqrt(1 - np.dot(r_rb,r_qb)**2/r_rb_norm**2/r_qb_norm**2)), \
+				  #np.append(-(r_qb/r_rb_norm/r_qb_norm-(np.dot(r_rb,r_qb)*r_rb)/r_rb_norm**3/r_qb_norm)/sqrt(1 - np.dot(r_rb,r_qb)**2/r_rb_norm**2/r_qb_norm**2),[0]*3)) \
 				  ])
 
-	b = np.array([gamma_safe_car*[r_qc_norm**2 - d_safe_car**2]-2*np.dot(-r_qc,Vq), \
-				  gamma_safe_car*[r_qr_norm**2 - d_safe_car**2]-2*np.dot(-r_qr,Vq), \
-				  gamma_safe_car*[r_qb_norm**2 - d_safe_car**2]-2*np.dot(-r_qb,Vq), \
-				  gamma_measuring*[d_measuring**2 - r_qc_norm**2]+2*np.dot(-r_qc,Vq), \
-				  gamma_measuring*[d_measuring**2 - r_qr_norm**2]+2*np.dot(-r_qr,Vq), \
-				  gamma_measuring*[d_measuring**2 - r_qb_norm**2]+2*np.dot(-r_qb,Vq), \
-				  (gamma_safe_uav/2)*[r_cr_norm**2 - d_safe_uav**2], \
-				  (gamma_safe_uav/2)*[r_cb_norm**2 - d_safe_uav**2], \
-				  (gamma_safe_uav/2)*[r_rc_norm**2 - d_safe_uav**2], \
-				  (gamma_safe_uav/2)*[r_rb_norm**2 - d_safe_uav**2], \
-				  (gamma_safe_uav/2)*[r_bc_norm**2 - d_safe_uav**2], \
-				  (gamma_safe_uav/2)*[r_br_norm**2 - d_safe_uav**2], \
-				  gamma_fov*[theta_fov_fix - theta_qc], \
-				  gamma_occ*[theta_occ - theta_occ_cr]+(r_rc/r_rc_norm/r_qc_norm - np.dot(r_rc,r_qc)*r_rc/r_rc_norm/r_qc_norm**3)/(sqrt(1 - np.dot(r_rc,r_qc)**2/r_rc_norm**2/r_qc_norm**2)), \
-				  gamma_occ*[theta_occ - theta_occ_cb]+(r_bc/r_bc_norm/r_qc_norm - np.dot(r_bc,r_qc)*r_bc/r_bc_norm/r_qc_norm**3)/(sqrt(1 - np.dot(r_bc,r_qc)**2/r_bc_norm**2/r_qc_norm**2)), \
-				  gamma_occ*[theta_occ - theta_occ_rc]+(r_cr/r_cr_norm/r_qr_norm - np.dot(r_cr,r_qr)*r_cr/r_cr_norm/r_qr_norm**3)/(sqrt(1 - np.dot(r_cr,r_qr)**2/r_cr_norm**2/r_qr_norm**2)), \
-				  gamma_occ*[theta_occ - theta_occ_rb]+(r_br/r_br_norm/r_qr_norm - np.dot(r_br,r_qr)*r_br/r_br_norm/r_qr_norm**3)/(sqrt(1 - np.dot(r_br,r_qr)**2/r_br_norm**2/r_qr_norm**2)), \
-				  gamma_occ*[theta_occ - theta_occ_bc]+(r_cb/r_cb_norm/r_qb_norm - np.dot(r_cb,r_qb)*r_cb/r_cb_norm/r_qb_norm**3)/(sqrt(1 - np.dot(r_cb,r_qb)**2/r_cb_norm**2/r_qb_norm**2)), \
-				  gamma_occ*[theta_occ - theta_occ_br]+(r_rb/r_rb_norm/r_qb_norm - np.dot(r_rb,r_qb)*r_rb/r_rb_norm/r_qb_norm**3)/(sqrt(1 - np.dot(r_rb,r_qb)**2/r_rb_norm**2/r_qb_norm**2)) \
+	b = np.array([gamma_safe_car*(r_qc_norm**2 - d_safe_car**2)-2*np.dot(-r_qc,Vq), \
+				  gamma_safe_car*(r_qr_norm**2 - d_safe_car**2)-2*np.dot(-r_qr,Vq), \
+				  gamma_safe_car*(r_qb_norm**2 - d_safe_car**2)-2*np.dot(-r_qb,Vq), \
+				  gamma_measuring*(d_measuring**2 - r_qc_norm**2)+2*np.dot(-r_qc,Vq), \
+				  gamma_measuring*(d_measuring**2 - r_qr_norm**2)+2*np.dot(-r_qr,Vq), \
+				  gamma_measuring*(d_measuring**2 - r_qb_norm**2)+2*np.dot(-r_qb,Vq), \
+				  (gamma_safe_uav/2)*(r_cr_norm**2 - d_safe_uav**2), \
+				  (gamma_safe_uav/2)*(r_cb_norm**2 - d_safe_uav**2), \
+				  (gamma_safe_uav/2)*(r_rc_norm**2 - d_safe_uav**2), \
+				  (gamma_safe_uav/2)*(r_rb_norm**2 - d_safe_uav**2), \
+				  (gamma_safe_uav/2)*(r_bc_norm**2 - d_safe_uav**2), \
+				  (gamma_safe_uav/2)*(r_br_norm**2 - d_safe_uav**2), \
+				  gamma_fov*(theta_fov_fix - theta_qc), \
+				  gamma_height*(Pc[2] - height_safe), \
+				  gamma_height*(Pr[2] - height_safe), \
+				  gamma_height*(Pb[2] - height_safe) \
+				  #gamma_occ*(theta_occ - theta_occ_cr)+(r_rc/r_rc_norm/r_qc_norm - np.dot(r_rc,r_qc)*r_rc/r_rc_norm/r_qc_norm**3)/(sqrt(1 - np.dot(r_rc,r_qc)**2/r_rc_norm**2/r_qc_norm**2)), \
+				  #gamma_occ*(theta_occ - theta_occ_cb)+(r_bc/r_bc_norm/r_qc_norm - np.dot(r_bc,r_qc)*r_bc/r_bc_norm/r_qc_norm**3)/(sqrt(1 - np.dot(r_bc,r_qc)**2/r_bc_norm**2/r_qc_norm**2)), \
+				  #gamma_occ*(theta_occ - theta_occ_rc)+(r_cr/r_cr_norm/r_qr_norm - np.dot(r_cr,r_qr)*r_cr/r_cr_norm/r_qr_norm**3)/(sqrt(1 - np.dot(r_cr,r_qr)**2/r_cr_norm**2/r_qr_norm**2)), \
+				  #gamma_occ*(theta_occ - theta_occ_rb)+(r_br/r_br_norm/r_qr_norm - np.dot(r_br,r_qr)*r_br/r_br_norm/r_qr_norm**3)/(sqrt(1 - np.dot(r_br,r_qr)**2/r_br_norm**2/r_qr_norm**2)), \
+				  #gamma_occ*(theta_occ - theta_occ_bc)+(r_cb/r_cb_norm/r_qb_norm - np.dot(r_cb,r_qb)*r_cb/r_cb_norm/r_qb_norm**3)/(sqrt(1 - np.dot(r_cb,r_qb)**2/r_cb_norm**2/r_qb_norm**2)), \
+				  #gamma_occ*(theta_occ - theta_occ_br)+(r_rb/r_rb_norm/r_qb_norm - np.dot(r_rb,r_qb)*r_rb/r_rb_norm/r_qb_norm**3)/(sqrt(1 - np.dot(r_rb,r_qb)**2/r_rb_norm**2/r_qb_norm**2)) \
 				  ])
 
 def	qpsolver():
@@ -197,10 +206,9 @@ def	qpsolver():
 		cons.append({'type': 'ineq', 'fun': cons_maker1(i)})
 	
 	ini = tuple(np.zeros(b.size + 12))
-	bnds = ((-3.0, 3.0),)*9+((-0.1, 0.1),)*3 + ((0, np.inf),)*b.size
+	bnds = ((-1.0, 1.0),)*9+((-0.05, 0.05),)*3 + ((0, np.inf),)*b.size
 	
 	optimal = minimize(object_fun, ini, method='SLSQP', bounds=bnds, constraints=cons,options={'maxiter':20}).x
-	print(object_fun(optimal[:12]))
 
 	camera_cmd.twist.linear.x = optimal[0]
 	camera_cmd.twist.linear.y = optimal[1]
@@ -215,6 +223,8 @@ def	qpsolver():
 	ranging_cmd.twist.angular.z = optimal[10]
 	bearing_cmd.twist.angular.z = optimal[11]
 
+	print(bearing_cmd)
+
 	
 	
 if __name__ == '__main__':
@@ -227,7 +237,7 @@ if __name__ == '__main__':
 		theta_FOV_pub = rospy.Publisher('/FOV', output_FOV, queue_size=1)
 		inter_uavs_distance_pub = rospy.Publisher('/inter_uavs_distance', output_inter_uavs_distance, queue_size=1)
 		theta_occ_pub = rospy.Publisher('/occlusion', output_occlusion, queue_size=1)
-		rate = rospy.Rate(30)
+		rate = rospy.Rate(10)
 		while not rospy.is_shutdown():			
 			rospy.Subscriber("/uavs_pose", output_uavs_pose, uavs_pose_cb)
 			rospy.Subscriber("/estimated_data", output_ukf, ukf_cb)
